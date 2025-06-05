@@ -22,8 +22,11 @@ const createSession = (req, res) => {
     const { sessionName } = req.body;
     const { error } = sessionNameSchema.validate(sessionName);
     if (error) return sendResponse(res, { success: false, message: 'Invalid sessionName. Only alphanumeric, underscore, hyphen allowed.', status: 400 });
-    if (whatsappService.clients[sessionName]) return sendResponse(res, { success: false, message: 'Session exists', status: 400 });
+    
+    const clientObj = whatsappService.clients[sessionName];
+    if (clientObj) return sendResponse(res, { success: false, message: 'Session exists', status: 400 });
     whatsappService.createClient(sessionName);
+    whatsappService.saveSession(sessionName, null, null);
     sendResponse(res, { success: true, message: 'Session created. Scan QR to pair.' });
   } catch (e) {
     sendResponse(res, { success: false, message: e.message, status: 500 });

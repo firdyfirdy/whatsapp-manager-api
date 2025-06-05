@@ -24,6 +24,7 @@ function loadSessions() {
 }
 
 function saveSession(sessionName, webhook, auth) {
+  if (fs.existsSync(getSessionFile(sessionName))) fs.unlinkSync(getSessionFile(sessionName));
   fs.writeFileSync(getSessionFile(sessionName), JSON.stringify({ webhook, auth }));
 }
 
@@ -45,6 +46,10 @@ function createClient(sessionName, webhook, auth) {
 
   client.on('ready', () => {
     logger.info(`[${sessionName}] Client is ready!`);
+  });
+
+  client.on('authenticated', () => {
+    logger.info(`[${sessionName}] Authenticated`);
   });
 
   client.on('message', async message => {
