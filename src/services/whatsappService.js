@@ -79,6 +79,12 @@ function removeClient(sessionName) {
   }
 }
 
+function sendMessage(sessionName, to, message) {
+  const clientObj = clients[sessionName];
+  if (!clientObj) return;
+  clientObj.client.sendMessage(to, message);
+}
+
 module.exports = {
   clients,
   getSessionFile,
@@ -86,5 +92,6 @@ module.exports = {
   saveSession,
   createClient,
   getClient,
-  removeClient
+  removeClient,
+  sendMessage
 };

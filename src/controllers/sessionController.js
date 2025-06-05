@@ -4,6 +4,8 @@ const { sendResponse } = require('../utils/response');
 const whatsappService = require('../services/whatsappService');
 const Joi = require('joi');
 
+whatsappService.loadSessions();
+
 // Validation schema
 const sessionNameSchema = Joi.string().regex(/^[\w-]+$/).required();
 
@@ -84,7 +86,7 @@ const sendMessage = async (req, res) => {
     const { to, message } = req.body;
     const clientObj = whatsappService.clients[sessionName];
     if (!clientObj) return sendResponse(res, { success: false, message: 'Session not found', status: 404 });
-    await clientObj.client.sendMessage(to, message);
+    whatsappService.sendMessage(sessionName, to, message);
     sendResponse(res, { success: true, message: 'Message sent' });
   } catch (e) {
     sendResponse(res, { success: false, message: e.message, status: 500 });
