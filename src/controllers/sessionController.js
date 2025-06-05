@@ -26,7 +26,6 @@ const createSession = (req, res) => {
     const clientObj = whatsappService.clients[sessionName];
     if (clientObj) return sendResponse(res, { success: false, message: 'Session exists', status: 400 });
     whatsappService.createClient(sessionName);
-    whatsappService.saveSession(sessionName, null, null);
     sendResponse(res, { success: true, message: 'Session created. Scan QR to pair.' });
   } catch (e) {
     sendResponse(res, { success: false, message: e.message, status: 500 });

@@ -49,6 +49,7 @@ function createClient(sessionName, webhook, auth) {
   });
 
   client.on('authenticated', () => {
+    saveSession(sessionName, webhook, auth);
     logger.info(`[${sessionName}] Authenticated`);
   });
 
