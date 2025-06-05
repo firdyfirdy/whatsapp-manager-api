@@ -11,7 +11,7 @@ const sessionNameSchema = Joi.string().regex(/^[\w-]+$/).required();
 
 const listSessions = (req, res) => {
   try {
-    sendResponse(res, { success: true, message: 'Sessions fetched', sessions: Object.keys(whatsappService.clients) });
+    sendResponse(res, { success: true, message: 'Sessions fetched', data: { sessions: Object.keys(whatsappService.clients) } });
   } catch (e) {
     sendResponse(res, { success: false, message: e.message, status: 500 });
   }
@@ -36,7 +36,7 @@ const getSessionQR = (req, res) => {
     const clientObj = whatsappService.clients[sessionName];
     if (!clientObj) return sendResponse(res, { success: false, message: 'Session not found', status: 404 });
     if (!clientObj.qr) return sendResponse(res, { success: false, message: 'QR not available', status: 404 });
-    sendResponse(res, { success: true, message: 'QR fetched', qr: clientObj.qr });
+    sendResponse(res, { success: true, message: 'QR fetched', data: { qr: clientObj.qr } });
   } catch (e) {
     sendResponse(res, { success: false, message: e.message, status: 500 });
   }
@@ -74,7 +74,7 @@ const getWebhook = (req, res) => {
     const { sessionName } = req.params;
     const clientObj = whatsappService.clients[sessionName];
     if (!clientObj) return sendResponse(res, { success: false, message: 'Session not found', status: 404 });
-    sendResponse(res, { success: true, message: 'Webhook fetched', webhook: clientObj.webhook, username: clientObj.auth?.username });
+    sendResponse(res, { success: true, message: 'Webhook fetched', data: { webhook: clientObj.webhook, username: clientObj.auth?.username, password: clientObj.auth?.password } });
   } catch (e) {
     sendResponse(res, { success: false, message: e.message, status: 500 });
   }
@@ -84,8 +84,6 @@ const sendMessage = async (req, res) => {
   try {
     const { sessionName } = req.params;
     const { to, message } = req.body;
-    const clientObj = whatsappService.clients[sessionName];
-    if (!clientObj) return sendResponse(res, { success: false, message: 'Session not found', status: 404 });
     whatsappService.sendMessage(sessionName, to, message);
     sendResponse(res, { success: true, message: 'Message sent' });
   } catch (e) {
