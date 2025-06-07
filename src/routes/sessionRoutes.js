@@ -117,10 +117,18 @@ router.delete('/sessions/:sessionName', sessionController.removeSession);
  *             properties:
  *               webhook:
  *                 type: string
+ *               authType:
+ *                 type: string
+ *                 enum: [null, basic_auth, header_auth, jwt_auth]
  *               username:
  *                 type: string
+ *                 required: false
  *               password:
  *                 type: string
+ *                 required: false
+ *               token:
+ *                 type: string
+ *                 required: false
  *     responses:
  *       200:
  *         description: Webhook set

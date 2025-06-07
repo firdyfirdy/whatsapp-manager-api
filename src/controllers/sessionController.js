@@ -59,11 +59,16 @@ const removeSession = (req, res) => {
 const setWebhook = (req, res) => {
   try {
     const { sessionName } = req.params;
-    const { webhook, username, password } = req.body;
+    const { webhook, authType, username, password, token } = req.body;
     const clientObj = whatsappService.clients[sessionName];
     if (!clientObj) return sendResponse(res, { success: false, message: 'Session not found', status: 404 });
     clientObj.webhook = webhook;
-    clientObj.auth = username && password ? { username, password } : undefined;
+    // authType: null, basic_auth, header_auth, jwt_auth
+    // if authType is null, then auth is null 
+    // if authType is basic_auth, then auth is { username, password }
+    // if authType is header_auth, then auth is { token }
+    // if authType is jwt_auth, then auth is { token }
+    clientObj.auth = authType === 'basic_auth' ? { username, password } : authType === 'header_auth' ? { token } : authType === 'jwt_auth' ? { token } : null;
     whatsappService.saveSession(sessionName, webhook, clientObj.auth);
     sendResponse(res, { success: true, message: 'Webhook set' });
   } catch (e) {

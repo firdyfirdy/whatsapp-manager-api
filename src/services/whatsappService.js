@@ -23,9 +23,11 @@ function loadSessions() {
   });
 }
 
-function saveSession(sessionName, webhook, auth) {
-  if (fs.existsSync(getSessionFile(sessionName))) fs.unlinkSync(getSessionFile(sessionName));
-  fs.writeFileSync(getSessionFile(sessionName), JSON.stringify({ webhook, auth }));
+function saveSession(data) {
+  if (fs.existsSync(getSessionFile(data.sessionName))){
+    fs.unlinkSync(getSessionFile(data.sessionName));
+  }
+  fs.writeFileSync(getSessionFile(data.sessionName), JSON.stringify(data));
 }
 
 function createClient(sessionName, webhook, auth) {
@@ -38,34 +40,99 @@ function createClient(sessionName, webhook, auth) {
   });
 
   clients[sessionName] = { client, webhook, auth };
+  clients[sessionName].authenticated = false;
 
   client.on('qr', qr => {
-    clients[sessionName].qr = qr;
-    logger.info(`[${sessionName}] QR RECEIVED`);
+    try {
+      clients[sessionName].qr = qr;
+      logger.info(`[${sessionName}] QR RECEIVED`);
+  
+      // check if more than 5 minutes the client not authenticated, 
+      // then remove the client
+      setTimeout(() => {
+        if (!clients[sessionName].authenticated) {
+          logger.info(`[${sessionName}] Client not authenticated after 5 minutes, removing...`);
+          removeClient(sessionName);
+        }
+      }, 5 * 60 * 1000);
+    } catch (e) {
+      logger.error(`[${sessionName}] Error getting qr: ${e.message}`);
+    }
   });
 
   client.on('ready', () => {
     logger.info(`[${sessionName}] Client is ready!`);
+    clients[sessionName].authenticated = true;
+    const user = client.info;
+    logger.info(`[${sessionName}] User info: ${JSON.stringify(user)}`);
+    logger.info(`Connected as: ${user.pushname}`);   // WhatsApp display name
+    logger.info(`WhatsApp ID: ${user.wid.user}`);    // Phone number (string, without +)
+    logger.info(`Full WID: ${user.wid._serialized}`); // Full ID (e.g. 1234567890@c.us)
+
+    saveSession({ 
+        sessionName, 
+        webhook: webhook, 
+        auth,
+        displayName: user.pushname, 
+        phoneNumber: user.wid.user,
+        authenticated: true 
+      });
   });
 
   client.on('authenticated', () => {
-    saveSession(sessionName, webhook, auth);
-    logger.info(`[${sessionName}] Authenticated`);
+    try {
+      logger.info(`[${sessionName}] is authenticated`);
+  
+      try {
+        clients[sessionName].authenticated = true;
+        const user = client.info;
+        logger.info(`[${sessionName}] User info: ${JSON.stringify(user)}`);
+        logger.info(`Connected as: ${user.pushname}`);   // WhatsApp display name
+        logger.info(`WhatsApp ID: ${user.wid.user}`);    // Phone number (string, without +)
+        logger.info(`Full WID: ${user.wid._serialized}`); // Full ID (e.g. 1234567890@c.us)
+  
+        saveSession({ 
+            sessionName, 
+            webhook: webhook, 
+            auth,
+            displayName: user.pushname, 
+            phoneNumber: user.wid.user,
+            authenticated: true 
+          });
+      } catch (e) {
+        logger.error(`[${sessionName}] Error getting user info: ${e.message}`);
+  
+        saveSession({ 
+            sessionName, 
+            webhook: webhook, 
+            auth, 
+            displayName: '', 
+            phoneNumber: '', 
+            authenticated: true 
+          });
+      }
+    } catch (e) {
+      logger.error(`[${sessionName}] Error authenticated: ${e.message}`);
+    }
   });
 
   client.on('message', async message => {
-    if (clients[sessionName].webhook) {
-      try {
-        await axios.post(clients[sessionName].webhook, {
-          event: 'message',
-          from: message.from,
-          body: message.body,
-          timestamp: new Date().toISOString(),
-          session: sessionName
-        }, clients[sessionName].auth ? { auth: clients[sessionName].auth } : {});
-      } catch (e) {
-        logger.error(`[${sessionName}] Webhook failed: ${e.message}`);
+    try {
+      if (clients[sessionName].webhook) {
+        try {
+          await axios.post(clients[sessionName].webhook, {
+            event: 'message',
+            from: message.from,
+            body: message.body,
+            timestamp: new Date().toISOString(),
+            session: sessionName
+          }, clients[sessionName].auth ? { auth: clients[sessionName].auth } : {});
+        } catch (e) {
+          logger.error(`[${sessionName}] Webhook failed: ${e.message}`);
+        }
       }
+    } catch (e) {
+      logger.error(`[${sessionName}] Error message: ${e.message}`);
     }
   });
 
